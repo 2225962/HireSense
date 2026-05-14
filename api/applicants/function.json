@@ -1,0 +1,25 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": ["get", "post"]
+    },
+    {
+      "type": "table",
+      "direction": "out",
+      "name": "outputTable",
+      "tableName": "applicants",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "table",
+      "direction": "in",
+      "name": "inputTable",
+      "tableName": "applicants",
+      "connection": "AzureWebJobsStorage"
+    }
+  ]
+}
