@@ -1,10 +1,9 @@
 {
   "name": "hiresense-ai",
   "version": "1.0.0",
-  "description": "AI Resume Screening Dashboard",
   "main": "server.js",
   "scripts": {
-    "start": "json-server --watch db.json --port 3000"
+    "start": "node server.js"
   },
   "dependencies": {
     "json-server": "^0.17.4"
