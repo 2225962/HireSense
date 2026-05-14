@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Resume Screening Dashboard</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #eef2f7;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: #1e40af;
+    }
+
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #e7f7ed;
+      border-radius: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #2563eb;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>📊 AI Resume Screening Dashboard</h1>
+
+  <!-- INPUT -->
+  <div class="card">
+    <h2>Applicant Evaluation</h2>
+
+    <input id="name" placeholder="Applicant Name">
+    <textarea id="skills" placeholder="Skills (Java, Python, SQL)"></textarea>
+    <input id="experience" type="number" placeholder="Years of Experience">
+    <input id="education" placeholder="Education (BSCS, IT, etc.)">
+    <input id="certifications" placeholder="Certifications (yes or number)">
+    <input id="projects" type="number" placeholder="Number of Projects">
+
+    <button onclick="evaluateApplicant()">Evaluate Applicant</button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card">
+    <h2>Recruitment Analytics</h2>
+    <canvas id="hireChart"></canvas>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card">
+    <h2>Applicant History</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Score</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+
+let chart;
+
+// ======================
+// INIT CHART
+// ======================
+function initChart() {
+  let ctx = document.getElementById("hireChart").getContext("2d");
+
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ["Proceed to Interview", "Reject"],
+      datasets: [{
+        label: "Applicants",
+        data: getChartData(),
+        backgroundColor: ["#22c55e", "#ef4444"]
+      }]
+    }
+  });
+}
+
+// ======================
+// UPDATE CHART
+// ======================
+function updateChart() {
+  chart.data.datasets[0].data = getChartData();
+  chart.update();
+}
+
+// ======================
+// COUNT DATA
+// ======================
+function getChartData() {
+  let history = JSON.parse(localStorage.getItem("applicants")) || [];
+
+  let proceed = history.filter(a => a.decision === "Proceed to Interview").length;
+  let reject = history.filter(a => a.decision === "Reject").length;
+
+  return [proceed, reject];
+}
+
+// ======================
+// MAIN SCORING SYSTEM
+// ======================
+function evaluateApplicant() {
+
+  let name = document.getElementById("name").value;
+  let skills = document.getElementById("skills").value.toLowerCase();
+  let experience = parseInt(document.getElementById("experience").value) || 0;
+  let education = document.getElementById("education").value.toLowerCase();
+  let cert = document.getElementById("certifications").value.toLowerCase();
+  let projects = parseInt(document.getElementById("projects").value) || 0;
+
+  let score = 0;
+
+  // RULE-BASED SCORING
+  if (skills.includes("java") || skills.includes("python") || skills.includes("sql")) {
+    score += 30;
+  }
+
+  if (experience >= 2) {
+    score += 25;
+  }
+
+  if (education.includes("bs") || education.includes("bachelor")) {
+    score += 10;
+  }
+
+  if (cert.includes("yes") || parseInt(cert) > 0) {
+    score += 20;
+  }
+
+  if (projects >= 2) {
+    score += 15;
+  }
+
+  let decision = score >= 70 ? "Proceed to Interview" : "Reject";
+
+  document.getElementById("result").innerHTML =
+    `Score: <b>${score}</b><br>Decision: <b>${decision}</b>`;
+
+  // SAVE HISTORY
+  let history = JSON.parse(localStorage.getItem("applicants")) || [];
+
+  history.push({
+    name,
+    score,
+    decision
+  });
+
+  localStorage.setItem("applicants", JSON.stringify(history));
+
+  loadHistory();
+  updateChart();
+}
+
+// ======================
+// LOAD HISTORY TABLE
+// ======================
+function loadHistory() {
+  let history = JSON.parse(localStorage.getItem("applicants")) || [];
+  let table = document.getElementById("history");
+
+  table.innerHTML = "";
+
+  history.forEach(app => {
+    table.innerHTML += `
+      <tr>
+        <td>${app.name}</td>
+        <td>${app.score}</td>
+        <td>${app.decision}</td>
+      </tr>
+    `;
+  });
+}
+
+// ======================
+// INIT SYSTEM
+// ======================
+loadHistory();
+initChart();
+
+</script>
+
+</body>
+</html>
