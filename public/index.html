@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HireSense AI Screening</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #eef2f7;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background: #2563eb;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>AI Resume Screening Dashboard</h1>
+
+  <!-- INPUT -->
+  <div class="card">
+    <h2>Evaluate Applicant</h2>
+
+    <input id="name" placeholder="Name">
+    <textarea id="skills" placeholder="Skills"></textarea>
+    <input id="experience" type="number" placeholder="Experience">
+    <input id="education" placeholder="Education">
+    <input id="certifications" placeholder="Certifications">
+    <input id="projects" type="number" placeholder="Projects">
+
+    <button onclick="evaluateApplicant()">Evaluate Applicant</button>
+
+    <div id="result"></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card">
+    <h2>Analytics</h2>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card">
+    <h2>History</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Score</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+
+let chart;
+
+// ======================
+// LOAD HISTORY
+// ======================
+async function loadHistory() {
+    let res = await fetch("/api/applicants");
+    let data = await res.json();
+
+    let table = document.getElementById("history");
+    table.innerHTML = "";
+
+    data.reverse().forEach(a => {
+        table.innerHTML += `
+        <tr>
+            <td>${a.name}</td>
+            <td>${a.score}</td>
+            <td>${a.decision}</td>
+        </tr>`;
+    });
+
+    updateChart(data);
+}
+
+// ======================
+// CHART
+// ======================
+function initChart(data) {
+    let ctx = document.getElementById("chart").getContext("2d");
+
+    chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Proceed", "Reject"],
+            datasets: [{
+                label: "Applicants",
+                data: getStats(data),
+                backgroundColor: ["green", "red"]
+            }]
+        }
+    });
+}
+
+function updateChart(data) {
+    let stats = getStats(data);
+    chart.data.datasets[0].data = stats;
+    chart.update();
+}
+
+function getStats(data) {
+    let proceed = data.filter(a => a.decision === "Proceed to Interview").length;
+    let reject = data.filter(a => a.decision === "Reject").length;
+    return [proceed, reject];
+}
+
+// ======================
+// EVALUATION
+// ======================
+async function evaluateApplicant() {
+
+    let name = document.getElementById("name").value;
+    let skills = document.getElementById("skills").value.toLowerCase();
+    let exp = parseInt(document.getElementById("experience").value) || 0;
+    let edu = document.getElementById("education").value.toLowerCase();
+    let cert = document.getElementById("certifications").value.toLowerCase();
+    let proj = parseInt(document.getElementById("projects").value) || 0;
+
+    let score = 0;
+
+    if (skills.includes("java") || skills.includes("python") || skills.includes("sql")) score += 30;
+    if (exp >= 2) score += 25;
+    if (edu.includes("bs")) score += 10;
+    if (cert.includes("yes") || parseInt(cert) > 0) score += 20;
+    if (proj >= 2) score += 15;
+
+    let decision = score >= 70 ? "Proceed to Interview" : "Reject";
+
+    document.getElementById("result").innerHTML =
+        `Score: <b>${score}</b> | Decision: <b>${decision}</b>`;
+
+    await fetch("/api/applicants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, score, decision })
+    });
+
+    loadHistory();
+}
+
+// ======================
+// INIT
+// ======================
+window.onload = async () => {
+    let res = await fetch("/api/applicants");
+    let data = await res.json();
+
+    initChart(data);
+    loadHistory();
+};
+
+</script>
+
+</body>
+</html>
