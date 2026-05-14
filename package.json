@@ -1,0 +1,16 @@
+{
+  "name": "hiresense-ai-screening",
+  "version": "1.0.0",
+  "description": "AI Resume Screening System with Azure Deployment",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
