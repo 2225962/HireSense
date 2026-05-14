@@ -133,8 +133,11 @@ let chart;
 // ======================
 // INIT CHART
 // ======================
-function initChart() {
+async function initChart() {
+
   let ctx = document.getElementById("hireChart").getContext("2d");
+
+  let data = await getChartData();
 
   chart = new Chart(ctx, {
     type: 'bar',
@@ -142,7 +145,7 @@ function initChart() {
       labels: ["Proceed to Interview", "Reject"],
       datasets: [{
         label: "Applicants",
-        data: getChartData(),
+        data: data,
         backgroundColor: ["#22c55e", "#ef4444"]
       }]
     }
@@ -152,19 +155,29 @@ function initChart() {
 // ======================
 // UPDATE CHART
 // ======================
-function updateChart() {
-  chart.data.datasets[0].data = getChartData();
+async function updateChart() {
+
+  let data = await getChartData();
+
+  chart.data.datasets[0].data = data;
   chart.update();
 }
 
 // ======================
-// COUNT DATA
+// GET CHART DATA FROM CLOUD
 // ======================
-function getChartData() {
-  let history = JSON.parse(localStorage.getItem("applicants")) || [];
+async function getChartData() {
 
-  let proceed = history.filter(a => a.decision === "Proceed to Interview").length;
-  let reject = history.filter(a => a.decision === "Reject").length;
+  let res = await fetch("/api/applicants");
+  let history = await res.json();
+
+  let proceed = history.filter(
+    a => a.decision === "Proceed to Interview"
+  ).length;
+
+  let reject = history.filter(
+    a => a.decision === "Reject"
+  ).length;
 
   return [proceed, reject];
 }
@@ -172,19 +185,42 @@ function getChartData() {
 // ======================
 // MAIN SCORING SYSTEM
 // ======================
-function evaluateApplicant() {
+async function evaluateApplicant() {
 
   let name = document.getElementById("name").value;
-  let skills = document.getElementById("skills").value.toLowerCase();
-  let experience = parseInt(document.getElementById("experience").value) || 0;
-  let education = document.getElementById("education").value.toLowerCase();
-  let cert = document.getElementById("certifications").value.toLowerCase();
-  let projects = parseInt(document.getElementById("projects").value) || 0;
+
+  let skills = document
+    .getElementById("skills")
+    .value
+    .toLowerCase();
+
+  let experience =
+    parseInt(document.getElementById("experience").value) || 0;
+
+  let education = document
+    .getElementById("education")
+    .value
+    .toLowerCase();
+
+  let cert = document
+    .getElementById("certifications")
+    .value
+    .toLowerCase();
+
+  let projects =
+    parseInt(document.getElementById("projects").value) || 0;
 
   let score = 0;
 
+  // ======================
   // RULE-BASED SCORING
-  if (skills.includes("java") || skills.includes("python") || skills.includes("sql")) {
+  // ======================
+
+  if (
+    skills.includes("java") ||
+    skills.includes("python") ||
+    skills.includes("sql")
+  ) {
     score += 30;
   }
 
@@ -192,11 +228,17 @@ function evaluateApplicant() {
     score += 25;
   }
 
-  if (education.includes("bs") || education.includes("bachelor")) {
+  if (
+    education.includes("bs") ||
+    education.includes("bachelor")
+  ) {
     score += 10;
   }
 
-  if (cert.includes("yes") || parseInt(cert) > 0) {
+  if (
+    cert.includes("yes") ||
+    parseInt(cert) > 0
+  ) {
     score += 20;
   }
 
@@ -204,36 +246,58 @@ function evaluateApplicant() {
     score += 15;
   }
 
-  let decision = score >= 70 ? "Proceed to Interview" : "Reject";
+  let decision =
+    score >= 70
+      ? "Proceed to Interview"
+      : "Reject";
+
+  // ======================
+  // SHOW RESULT
+  // ======================
 
   document.getElementById("result").innerHTML =
-    `Score: <b>${score}</b><br>Decision: <b>${decision}</b>`;
+    `Score: <b>${score}</b><br>
+     Decision: <b>${decision}</b>`;
 
-  // SAVE HISTORY
-  let history = JSON.parse(localStorage.getItem("applicants")) || [];
+  // ======================
+  // SAVE TO AZURE CLOUD
+  // ======================
 
-  history.push({
-    name,
-    score,
-    decision
+  await fetch("/api/applicants", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name,
+      score,
+      decision
+    })
   });
 
-  localStorage.setItem("applicants", JSON.stringify(history));
+  // ======================
+  // REFRESH
+  // ======================
 
-  loadHistory();
-  updateChart();
+  await loadHistory();
+  await updateChart();
 }
 
 // ======================
-// LOAD HISTORY TABLE
+// LOAD HISTORY FROM CLOUD
 // ======================
-function loadHistory() {
-  let history = JSON.parse(localStorage.getItem("applicants")) || [];
+async function loadHistory() {
+
+  let res = await fetch("/api/applicants");
+
+  let history = await res.json();
+
   let table = document.getElementById("history");
 
   table.innerHTML = "";
 
-  history.forEach(app => {
+  history.reverse().forEach(app => {
+
     table.innerHTML += `
       <tr>
         <td>${app.name}</td>
@@ -247,10 +311,13 @@ function loadHistory() {
 // ======================
 // INIT SYSTEM
 // ======================
-loadHistory();
-initChart();
+window.onload = async () => {
+
+  await loadHistory();
+  await initChart();
+
+};
 
 </script>
-
 </body>
 </html>
