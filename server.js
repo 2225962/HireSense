@@ -1,23 +1,40 @@
-const jsonServer = require("json-server");
-const path = require("path");
+const express = require("express");
+const fs = require("fs");
+const cors = require("cors");
 
-const server = jsonServer.create();
-const router = jsonServer.router(path.join(__dirname, "db.json"));
-const middlewares = jsonServer.defaults();
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname));
 
-server.use(middlewares);
-server.use(jsonServer.bodyParser);
+const DB_FILE = "db.json";
 
-// API ROUTES
-server.use("/api", router);
+// read data
+function readData() {
+    if (!fs.existsSync(DB_FILE)) return [];
+    return JSON.parse(fs.readFileSync(DB_FILE));
+}
 
-// FRONTEND
-server.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+// write data
+function writeData(data) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+}
+
+// GET applicants
+app.get("/api/applicants", (req, res) => {
+    res.json(readData());
+});
+
+// POST applicant
+app.post("/api/applicants", (req, res) => {
+    let data = readData();
+    data.push(req.body);
+    writeData(data);
+    res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, () => {
+    console.log("Server running on port " + PORT);
 });
